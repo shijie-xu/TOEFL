@@ -5,11 +5,14 @@ import re
 import urllib
 import urllib.request
 import requests
-import sys
+import os
 
 
 def get_homepage(url):
-    html = requests.get(url).text
+    req = requests.get(url)
+    html = req.text
+    # print(req.encoding)
+    # really superised on the encoding!
     return html
 
 
@@ -29,18 +32,29 @@ if __name__ == '__main__':
         # get title
         pattern_title = re.compile(
             r'<h1 id="nrtitle">(.+?)</h1>')
-        title = re.findall(pattern_title, content)[0]
-
+        title = pattern_title.findall(content)[0].encode(
+            'ISO-8859-1').decode('utf-8')
+        # print(title)
         # get mp3
-        pattern_mp3 = re.compile(
-            r'<a target="_blank" href="(.+?)"><font color="blue">下载MP3到电脑</font></a>'
+        pattern_mp3_page = re.compile(
+            r'<a target="_blank" href="(/mp3/.+?)">'
         )
-        # print(content)
-        mp3_page = re.findall(pattern_mp3, content)[0]
-        mp3_content = get_homepage(r'http://www.kekenet.com/'+mp3_page)
+        mp3_page = r'http://www.kekenet.com' + \
+            pattern_mp3_page.findall(content)[0]
 
-        pattern_downmp3 = re.compile(
-            r'<a target="_blank" href="(.+?)" style="color:#195A94;"><font size="5px"><strong>mp3下载地址1</strong></font></a>'
-        )
-        mp3_link = re.findall(pattern_downmp3, mp3_content)[0]
-        urllib.request.urlretrieve(mp3_link, title+".mp3")
+        mp3_content = get_homepage(mp3_page)
+        pattern_downlink = re.compile(
+            r'<a target="_blank" href="(http://.+?mp3)"')
+        downlink = pattern_downlink.findall(mp3_content)
+        # try to retrieve mp3
+        for link in downlink:
+            try:
+                down_name = title.replace(':', ' ')+".mp3"
+                if (os.path.exists(down_name)):
+                    break
+                urllib.request.urlretrieve(
+                    link, down_name)
+                print('downloading '+title+' ...')
+                break
+            except:
+                continue
